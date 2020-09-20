@@ -1,6 +1,6 @@
 package znet
 
-import "zinx/ziface"
+import "github.com/YungMonk/zinx/ziface"
 
 // BaseRouter 实现 IRouter 接口时，先嵌入 BaseRouter 基类，然后根据这个基类进行重写就可以了
 type BaseRouter struct{}

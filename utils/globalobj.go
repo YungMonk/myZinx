@@ -3,7 +3,8 @@ package utils
 import (
 	"encoding/json"
 	"io/ioutil"
-	"zinx/ziface"
+
+	"github.com/YungMonk/zinx/ziface"
 )
 
 // GlobalObj 储存有关框架的所有配置，供其它模块使用

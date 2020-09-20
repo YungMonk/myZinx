@@ -1,6 +1,6 @@
 package znet
 
-import "zinx/ziface"
+import "github.com/YungMonk/zinx/ziface"
 
 // Request 实现 IRequest 接口
 type Request struct {

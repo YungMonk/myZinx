@@ -3,8 +3,9 @@ package znet
 import (
 	"fmt"
 	"net"
-	"zinx/utils"
-	"zinx/ziface"
+
+	"github.com/YungMonk/zinx/utils"
+	"github.com/YungMonk/zinx/ziface"
 )
 
 // Server IServer接口的实现
