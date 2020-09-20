@@ -3,6 +3,7 @@ package znet
 import (
 	"fmt"
 	"net"
+	"zinx/utils"
 	"zinx/ziface"
 )
 
@@ -45,7 +46,7 @@ func (c *Connection) StartReader() {
 
 	for {
 		// 将远程客户端的数据写入 buffer 中，当前最大长度是 512
-		buffer := make([]byte, 512)
+		buffer := make([]byte, utils.GlobalObject.MaxPackageSize)
 		_, err := c.Conn.Read(buffer)
 		if err != nil {
 			fmt.Println("Reader recieve data error:", err)
