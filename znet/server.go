@@ -28,7 +28,7 @@ type Server struct {
 
 // Start 实现IServer接口中的，Start()方法
 func (s *Server) Start() {
-	fmt.Printf("[Zinx] ServerName:%s, Linstener at IP:%s, Port is %d, is staring",
+	fmt.Printf("[Zinx] ServerName:%s, Linstener at IP:%s, Port is %d, is staring\n",
 		utils.GlobalObject.Name,
 		utils.GlobalObject.Host,
 		utils.GlobalObject.TCPPort,
