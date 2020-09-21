@@ -59,7 +59,7 @@ func (s *Server) Start() {
 			// 如果有客户端连接，阻塞会返回
 			clinetConn, err := linsten.AcceptTCP()
 			if err != nil {
-				fmt.Printf("accept err:$s\n", err)
+				fmt.Println("accept err:$s\n", err)
 				continue
 			}
 

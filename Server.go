@@ -2,8 +2,9 @@ package main
 
 import (
 	"fmt"
-	"zinx/ziface"
-	"zinx/znet"
+
+	"github.com/YungMonk/zinx/ziface"
+	"github.com/YungMonk/zinx/znet"
 )
 
 // PingRouter 自定义路由

@@ -1,12 +1,12 @@
 package znet
 
 import (
+	"errors"
 	"fmt"
+	"io"
 	"net"
 
 	"github.com/YungMonk/zinx/ziface"
-
-	"github.com/YungMonk/zinx/utils"
 )
 
 // Connection 链接模块
@@ -47,18 +47,38 @@ func (c *Connection) StartReader() {
 	defer c.Stop()
 
 	for {
-		// 将远程客户端的数据写入 buffer 中，当前最大长度是 512
-		buffer := make([]byte, utils.GlobalObject.MaxPackageSize)
-		_, err := c.Conn.Read(buffer)
-		if err != nil {
-			fmt.Println("Reader recieve data error:", err)
-			continue
+		// 创建一个拆包，解包对象
+		dp := NewDataPack()
+
+		// 读取客户端的msg head 二进制流 8个字节
+		headData := make([]byte, dp.GetHeadLen())
+		if _, err := io.ReadFull(c.GetTCPConnection(), headData); err != nil {
+			fmt.Println("read msg head error ", err)
+			return
 		}
+
+		// 拆包，得到 MsgID 和 msgDataLen 放在msg.Data中
+		// 第二次拆包得到 MsgData （根据msgDataLen从二进制流中读取MsgData，放入msg.Data中）
+		msg, err := dp.UnPack(headData)
+		if err != nil {
+			fmt.Println("unpack error", err)
+			return
+		}
+
+		var data []byte
+		if msg.GetDataLen() > 0 {
+			data = make([]byte, msg.GetDataLen())
+			if _, err := io.ReadFull(c.GetTCPConnection(), data); err != nil {
+				fmt.Println("read msg data error ", err)
+				return
+			}
+		}
+		msg.SetData(data)
 
 		// 得到当前链接 Conn 的 Request 请求的数据
 		req := Request{
 			conn: c,
-			data: buffer,
+			msg:  msg,
 		}
 
 		// 从路由中找到注册绑定的 Conn 对应的 Router 调用
@@ -115,7 +135,26 @@ func (c *Connection) RemoteAddr() net.Addr {
 	return c.Conn.RemoteAddr()
 }
 
-// Send 发送数据，将数据发送给远程客户端
-func (c *Connection) Send(data []byte) error {
+// SendMsg 发送数据（将我们要发送给客户端的数据，先进行封包，再发送），将数据发送给远程客户端
+func (c *Connection) SendMsg(msgid uint32, data []byte) error {
+	if c.isClosed == true {
+		return errors.New("Connection closed when send msg")
+	}
+
+	// 将 data 进行封包
+	dp := NewDataPack()
+	// binaryMsg格式 MsgDataLen/MsgID/MsgData
+	binaryMsg, err := dp.Pack(NewMessage(msgid, data))
+	if err != nil {
+		fmt.Println("Pack error msg id = ", msgid)
+		return errors.New("Pack error msg")
+	}
+
+	// 将数据写回客户端
+	if _, err := c.Conn.Write(binaryMsg); err != nil {
+		fmt.Println("Write msg error ", err, " msgId = ", msgid)
+		return errors.New("conn write msg error")
+	}
+
 	return nil
 }
