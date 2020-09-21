@@ -6,6 +6,7 @@ import (
 	"io"
 	"net"
 
+	"github.com/YungMonk/zinx/utils"
 	"github.com/YungMonk/zinx/ziface"
 )
 
@@ -47,7 +48,7 @@ func NewConnection(conn *net.TCPConn, connID uint32, msghandler ziface.IMsgHandl
 // StartReader 链接的读取业务数据方法
 func (c *Connection) StartReader() {
 	fmt.Println("[StartReader Goroutine is running]")
-	defer fmt.Println("connID=", c.ConnID, "[Reader is exit], remote addr is:", c.Conn.RemoteAddr().String())
+	defer fmt.Println("[Reader is exit], connID=", c.ConnID, "remote addr is:", c.Conn.RemoteAddr().String())
 	defer c.Stop()
 
 	for {
@@ -87,14 +88,19 @@ func (c *Connection) StartReader() {
 
 		// 从路由中找到注册绑定的 Conn 对应的 Router 调用
 		// 根据绑定好的 MsgID 找到对应的处理 api 业务进行执行
-		go c.MsgHandler.DoMsgHandler(&req)
+		if utils.GlobalObject.WorkerPoolSize > 0 {
+			// 已经开启了工作池，将消息发送给工作池处理
+			c.MsgHandler.SendMsgToTaskQueue(&req)
+		} else {
+			go c.MsgHandler.DoMsgHandler(&req)
+		}
 	}
 }
 
 // StartWriter 写消息Goroutine，专门给客户端发送消息的模块
 func (c *Connection) StartWriter() {
 	fmt.Println("[StartWriter Goroutine is running]")
-	defer fmt.Println(c.RemoteAddr().String(), "[conn Writer exit]")
+	defer fmt.Println("[conn Writer exit]", c.RemoteAddr().String())
 
 	// 不断的阻塞等待channel消息，往客户端客发送消息
 	for {

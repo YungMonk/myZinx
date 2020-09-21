@@ -3,6 +3,7 @@ package utils
 import (
 	"encoding/json"
 	"io/ioutil"
+	"runtime"
 
 	"github.com/YungMonk/zinx/ziface"
 )
@@ -22,9 +23,11 @@ type GlobalObj struct {
 	/**
 	 * Zinx
 	 */
-	Version        string //当前Zinx的版本号
-	MaxConn        int    // 当前服务器主机允许的最大连接数
-	MaxPackageSize uint32 //当前服务器数据包的最大值
+	Version          string // 当前Zinx的版本号
+	MaxConn          int    // 当前服务器主机允许的最大连接数
+	MaxPackageSize   uint32 // 当前服务器数据包的最大值
+	WorkerPoolSize   uint32 // 当前业务工作 worker 池的数量
+	MaxWorkerTaskLen uint32 // 每个 Worker 对应的消息队列的任务的数量最大值（限定条件）(每个消息队列中所存请求数量)
 }
 
 // GlobalObject 定义一个全局对外的 GlobalObj 对象
@@ -48,13 +51,15 @@ func (g *GlobalObj) Reload() {
 func init() {
 	// 如果配置文件没有加载，默认值
 	GlobalObject = &GlobalObj{
-		Name:           "Zinx Server App",
-		Host:           "0.0.0.0",
-		TCPPort:        8999,
-		IPVersion:      "tcp4",
-		Version:        "v0.3",
-		MaxConn:        1000,
-		MaxPackageSize: 4092,
+		Name:             "Zinx Server App",
+		Host:             "0.0.0.0",
+		TCPPort:          8999,
+		IPVersion:        "tcp4",
+		Version:          "v0.3",
+		MaxConn:          1000,
+		MaxPackageSize:   4092,
+		WorkerPoolSize:   uint32(runtime.NumCPU()),
+		MaxWorkerTaskLen: 1024,
 	}
 
 	// 应该尝试从zinx/conf中去加载一些用户自定义的参数
