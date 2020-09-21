@@ -20,8 +20,11 @@ type Connection struct {
 	// 当前的链接状态
 	isClosed bool
 
-	// 告知当前链接已经停止/退出的 channel
+	// 告知当前链接已经停止/退出的 channel（由 Reader 告知 Writer 退出）
 	ExitChan chan bool
+
+	// 无缓冲通道，用于读、写Goroutine之间的消息通信
+	msgChan chan []byte
 
 	// 当前 Server 的消息管理模块，用来处理绑定的 MsgID 和对应处理业务API的关系
 	MsgHandler ziface.IMsgHandle
@@ -35,6 +38,7 @@ func NewConnection(conn *net.TCPConn, connID uint32, msghandler ziface.IMsgHandl
 		MsgHandler: msghandler,
 		isClosed:   false,
 		ExitChan:   make(chan bool, 1),
+		msgChan:    make(chan []byte),
 	}
 
 	return c
@@ -42,8 +46,8 @@ func NewConnection(conn *net.TCPConn, connID uint32, msghandler ziface.IMsgHandl
 
 // StartReader 链接的读取业务数据方法
 func (c *Connection) StartReader() {
-	fmt.Println("StartReader Goroutine is running ...")
-	defer fmt.Println("connID=", c.ConnID, "Reader is exit, remote addr is:", c.Conn.RemoteAddr().String())
+	fmt.Println("[StartReader Goroutine is running]")
+	defer fmt.Println("connID=", c.ConnID, "[Reader is exit], remote addr is:", c.Conn.RemoteAddr().String())
 	defer c.Stop()
 
 	for {
@@ -87,6 +91,26 @@ func (c *Connection) StartReader() {
 	}
 }
 
+// StartWriter 写消息Goroutine，专门给客户端发送消息的模块
+func (c *Connection) StartWriter() {
+	fmt.Println("[StartWriter Goroutine is running]")
+	defer fmt.Println(c.RemoteAddr().String(), "[conn Writer exit]")
+
+	// 不断的阻塞等待channel消息，往客户端客发送消息
+	for {
+		select {
+		case data := <-c.msgChan:
+			// 有数据写给客户端
+			if _, err := c.Conn.Write(data); err != nil {
+				fmt.Println("Send data error ", err)
+			}
+		case <-c.ExitChan:
+			// 代表 Reader 已经退出，此时 Writer 也要退出
+			return
+		}
+	}
+}
+
 // Start 启动链接，让当前链接开始工作
 func (c *Connection) Start() {
 	fmt.Println("Connection Start ... \n ConnID :", c.ConnID)
@@ -95,7 +119,7 @@ func (c *Connection) Start() {
 	go c.StartReader()
 
 	// 启动 往当前的链接写入数据的业务
-
+	go c.StartWriter()
 }
 
 // Stop 停止链接，结束当前链接的工作
@@ -112,8 +136,12 @@ func (c *Connection) Stop() {
 	// 关闭 socket 链接
 	c.Conn.Close()
 
+	// 告知 Writer 关闭
+	c.ExitChan <- true
+
 	// 回收资源
 	close(c.ExitChan)
+	close(c.msgChan)
 }
 
 // GetTCPConnection 获取当前链接绑定的 socket conn
@@ -147,10 +175,7 @@ func (c *Connection) SendMsg(msgid uint32, data []byte) error {
 	}
 
 	// 将数据写回客户端
-	if _, err := c.Conn.Write(binaryMsg); err != nil {
-		fmt.Println("Write msg error ", err, " msgId = ", msgid)
-		return errors.New("conn write msg error")
-	}
+	c.msgChan <- binaryMsg
 
 	return nil
 }
