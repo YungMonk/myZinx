@@ -47,7 +47,7 @@ func main() {
 	s := znet.NewServer("[zinx.v0.1]")
 
 	// 2.给服务注册路由
-	s.AddRouter(&PingRouter{})
+	s.AddRouter(0, &PingRouter{})
 
 	// 3.启动Server
 	s.Serve()
