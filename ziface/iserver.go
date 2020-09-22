@@ -16,4 +16,16 @@ type IServer interface {
 
 	// 获取当前服务的连接管理器
 	GetConnMgr() IConnManager
+
+	// 注册 OnConnStart 钩子函数的方法
+	SetOnConnStart(func(conn IConnection))
+
+	// 注册 OnConnStop 钩子函数的方法
+	SetOnConnStop(func(conn IConnection))
+
+	// 调用 OnConnStart 钩子函数的方法
+	CallOnConnStart(conn IConnection)
+
+	// 调用 OnConnStop 钩子函数的方法
+	CallOnConnStop(conn IConnection)
 }

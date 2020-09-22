@@ -27,6 +27,24 @@ type Server struct {
 
 	// 当前 Server 的连接管理器
 	ConnMgr ziface.IConnManager
+
+	// 当前 Server 创建连接之后自动调用 Hook 函数----OnConnStart
+	OnConnStart func(conn ziface.IConnection)
+
+	// 当前 Server 销毁连接之前自动调用 Hook 函数----OnConnStop
+	OnConnStop func(conn ziface.IConnection)
+}
+
+// NewServer 初始化 Server 模块的方法
+func NewServer(name string) ziface.IServer {
+	return &Server{
+		Name:       utils.GlobalObject.Name,
+		IPVersion:  utils.GlobalObject.IPVersion,
+		IP:         utils.GlobalObject.Host,
+		Port:       utils.GlobalObject.TCPPort,
+		MsgHandler: NewMsgHandler(),
+		ConnMgr:    NewConnManager(),
+	}
 }
 
 // Start 实现IServer接口中的，Start()方法
@@ -119,14 +137,32 @@ func (s *Server) GetConnMgr() ziface.IConnManager {
 	return s.ConnMgr
 }
 
-// NewServer 初始化 Server 模块的方法
-func NewServer(name string) ziface.IServer {
-	return &Server{
-		Name:       utils.GlobalObject.Name,
-		IPVersion:  utils.GlobalObject.IPVersion,
-		IP:         utils.GlobalObject.Host,
-		Port:       utils.GlobalObject.TCPPort,
-		MsgHandler: NewMsgHandler(),
-		ConnMgr:    NewConnManager(),
+// SetOnConnStart 注册 OnConnStart 钩子函数的方法
+func (s *Server) SetOnConnStart(hookFunc func(conn ziface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+// SetOnConnStop 注册 OnConnStop 钩子函数的方法
+func (s *Server) SetOnConnStop(hookFunc func(conn ziface.IConnection)) {
+	s.OnConnStop = hookFunc
+}
+
+// CallOnConnStart 调用 OnConnStart 钩子函数的方法
+func (s *Server) CallOnConnStart(conn ziface.IConnection) {
+	if s.OnConnStart == nil {
+		return
 	}
+
+	fmt.Println("[Call] OnStart() had been callback.")
+	s.OnConnStart(conn)
+}
+
+// CallOnConnStop 调用 OnConnStop 钩子函数的方法
+func (s *Server) CallOnConnStop(conn ziface.IConnection) {
+	if s.OnConnStop == nil {
+		return
+	}
+
+	fmt.Println("[Call] OnStart() had been callback.")
+	s.OnConnStop(conn)
 }
