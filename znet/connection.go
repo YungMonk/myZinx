@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 
 	"github.com/YungMonk/zinx/utils"
 	"github.com/YungMonk/zinx/ziface"
@@ -32,6 +33,12 @@ type Connection struct {
 
 	// 当前 Server 的消息管理模块，用来处理绑定的 MsgID 和对应处理业务API的关系
 	MsgHandler ziface.IMsgHandle
+
+	// 链接属性集合
+	property map[string]interface{}
+
+	// 保护链接属性的锁
+	propertyLock sync.RWMutex
 }
 
 // NewConnection 初始化链接的方法
@@ -200,4 +207,33 @@ func (c *Connection) SendMsg(msgid uint32, data []byte) error {
 	c.msgChan <- binaryMsg
 
 	return nil
+}
+
+// SetProperty 设置链接属性
+func (c *Connection) SetProperty(key string, value interface{}) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	c.property[key] = value
+}
+
+// GetProperty 获取链接属性
+func (c *Connection) GetProperty(key string) (interface{}, error) {
+	c.propertyLock.RLock()
+	defer c.propertyLock.RUnlock()
+
+	value, ok := c.property[key]
+	if !ok {
+		return nil, fmt.Errorf("the key=%s not found", key)
+	}
+
+	return value, nil
+}
+
+// RemoveProperty 移除链接属性
+func (c *Connection) RemoveProperty(key string) {
+	c.propertyLock.Lock()
+	defer c.propertyLock.Unlock()
+
+	delete(c.property, key)
 }
