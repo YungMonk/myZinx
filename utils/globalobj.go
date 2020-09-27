@@ -101,7 +101,7 @@ func init() {
 		Host:             "0.0.0.0",
 		TCPPort:          8999,
 		IPVersion:        "tcp4",
-		Version:          "v0.3",
+		Version:          "v0.11",
 		MaxConn:          1000,
 		MaxPackageSize:   4092,
 		WorkerPoolSize:   uint32(runtime.NumCPU()),
