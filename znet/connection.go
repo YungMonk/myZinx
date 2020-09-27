@@ -28,8 +28,14 @@ type Connection struct {
 	// 告知当前链接已经停止/退出的 channel（由 Reader 告知 Writer 退出）
 	ExitChan chan bool
 
+	// 告知当前链接已经停止/退出的 channel（由 Reader 告知 Writer 退出）
+	ExitBuffChan chan bool
+
 	// 无缓冲通道，用于读、写Goroutine之间的消息通信
 	msgChan chan []byte
+
+	// 有缓冲通道，用于读、写Goroutine之间的消息通信
+	msgBuffChan chan []byte
 
 	// 当前 Server 的消息管理模块，用来处理绑定的 MsgID 和对应处理业务API的关系
 	MsgHandler ziface.IMsgHandle
@@ -44,14 +50,15 @@ type Connection struct {
 // NewConnection 初始化链接的方法
 func NewConnection(server ziface.IServer, conn *net.TCPConn, connID uint32, msghandler ziface.IMsgHandle) *Connection {
 	c := &Connection{
-		TCPServer:  server,
-		Conn:       conn,
-		ConnID:     connID,
-		MsgHandler: msghandler,
-		isClosed:   false,
-		ExitChan:   make(chan bool, 1),
-		msgChan:    make(chan []byte),
-		property:   make(map[string]interface{}),
+		TCPServer:   server,
+		Conn:        conn,
+		ConnID:      connID,
+		MsgHandler:  msghandler,
+		isClosed:    false,
+		ExitChan:    make(chan bool, 1),
+		msgChan:     make(chan []byte),
+		msgBuffChan: make(chan []byte, utils.GlobalObject.MaxMsgChanLen),
+		property:    make(map[string]interface{}),
 	}
 
 	// 将 connection 加入到 connectionManager中
@@ -128,6 +135,20 @@ func (c *Connection) StartWriter() {
 		case <-c.ExitChan:
 			// 代表 Reader 已经退出，此时 Writer 也要退出
 			return
+		case data, ok := <-c.msgBuffChan:
+			if ok {
+				//有数据要写给客户端
+				if _, err := c.Conn.Write(data); err != nil {
+					fmt.Println("Send Buff Data error:, ", err, " Conn Writer exit")
+					return
+				}
+			} else {
+				fmt.Println("msgBuffChan is Closed")
+				break
+			}
+		case <-c.ExitBuffChan:
+			// 代表 Reader 已经退出，此时 Writer 也要退出
+			return
 		}
 	}
 }
@@ -165,13 +186,17 @@ func (c *Connection) Stop() {
 
 	// 告知 Writer 关闭
 	c.ExitChan <- true
+	// 告知 Writer 关闭
+	c.ExitBuffChan <- true
 
 	// 将当前 connection 从 connectionManager 中移除
 	c.TCPServer.GetConnMgr().Remove(c)
 
 	// 回收资源
 	close(c.ExitChan)
+	close(c.ExitBuffChan)
 	close(c.msgChan)
+	close(c.msgBuffChan)
 }
 
 // GetTCPConnection 获取当前链接绑定的 socket conn
@@ -206,6 +231,27 @@ func (c *Connection) SendMsg(msgid uint32, data []byte) error {
 
 	// 将数据写回客户端
 	c.msgChan <- binaryMsg
+
+	return nil
+}
+
+// SendBuffMsg 发送数据（将我们要发送给客户端的数据，先进行封包，再发送），将数据发送给远程客户端
+func (c *Connection) SendBuffMsg(msgid uint32, data []byte) error {
+	if c.isClosed == true {
+		return errors.New("Connection closed when send msg")
+	}
+
+	// 将 data 进行封包
+	dp := NewDataPack()
+	// binaryMsg格式 MsgDataLen/MsgID/MsgData
+	binaryMsg, err := dp.Pack(NewMessage(msgid, data))
+	if err != nil {
+		fmt.Println("Pack error msg id = ", msgid)
+		return errors.New("Pack error msg")
+	}
+
+	// 将数据写回客户端
+	c.msgBuffChan <- binaryMsg
 
 	return nil
 }

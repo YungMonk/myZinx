@@ -19,8 +19,11 @@ type IConnection interface {
 	// 获取远程客户端的TCP状态，IP，Port
 	RemoteAddr() net.Addr
 
-	// 发送数据，将数据发送给远程客户端
+	// 无缓冲的发送数据，将数据发送给远程客户端
 	SendMsg(msgid uint32, data []byte) error
+
+	// 有缓冲的发送数据，将数据发送给远程客户端
+	SendBuffMsg(msgid uint32, data []byte) error
 
 	// 设置链接属性
 	SetProperty(key string, value interface{})

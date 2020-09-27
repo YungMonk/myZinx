@@ -8,6 +8,19 @@ import (
 	"github.com/YungMonk/zinx/ziface"
 )
 
+var zinxLogo = `                                        
+              ██                        
+              ▀▀                        
+ ████████   ████     ██▄████▄  ▀██  ██▀ 
+     ▄█▀      ██     ██▀   ██    ████   
+   ▄█▀        ██     ██    ██    ▄██▄   
+ ▄██▄▄▄▄▄  ▄▄▄██▄▄▄  ██    ██   ▄█▀▀█▄  
+ ▀▀▀▀▀▀▀▀  ▀▀▀▀▀▀▀▀  ▀▀    ▀▀  ▀▀▀  ▀▀▀ 
+                                        `
+var topLine = `┌───────────────────────────────────────────────────┐`
+var borderLine = `│`
+var bottomLine = `└───────────────────────────────────────────────────┘`
+
 // Server IServer接口的实现
 type Server struct {
 	// 服务器名称
@@ -165,4 +178,14 @@ func (s *Server) CallOnConnStop(conn ziface.IConnection) {
 
 	fmt.Println("[Call] OnStart() had been callback.")
 	s.OnConnStop(conn)
+}
+
+func init() {
+	fmt.Println(zinxLogo)
+	fmt.Println(topLine)
+	fmt.Println(bottomLine)
+	fmt.Printf("[Zinx] Version: %s, MaxConn: %d, MaxPackageSize: %d\n",
+		utils.GlobalObject.Version,
+		utils.GlobalObject.MaxConn,
+		utils.GlobalObject.MaxPackageSize)
 }

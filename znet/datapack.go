@@ -70,5 +70,6 @@ func (dp *DataPack) UnPack(binarySteam []byte) (ziface.IMessage, error) {
 		return nil, fmt.Errorf("too large msg data recieve")
 	}
 
+	// 这里只需要把head的数据拆包出来就可以了，然后再通过head的长度，再从conn读取一次数据
 	return msg, nil
 }
