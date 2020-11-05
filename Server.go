@@ -16,7 +16,7 @@ type PingRouter struct {
 func (pr *PingRouter) PreHandle(request ziface.IRequest) {
 	fmt.Println("Call Router PreHandle ...")
 
-	_, err := request.GetConnection().GetTCPConnection().Write([]byte("befor ping..."))
+	_, err := request.GetConnection().GetTCPConnection().Write([]byte("before ping..."))
 	if err != nil {
 		fmt.Println("call back before ping error", err)
 	}
